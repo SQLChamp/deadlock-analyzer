@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SQL Server Deadlock Analyzer</title>
+
+    <!-- Azure Portal-style fonts and colors -->
+    <style>
+        @import url('https://static2.sharepointonline.com/files/fabric/assets/typography/typography.css');
+
+        :root {
+            --azure-blue: #0078d4;
+            --azure-blue-dark: #005a9e;
+            --neutral-gray-light: #f3f2f1;
+            --neutral-gray-medium-light: #edebe9;
+            --neutral-gray-medium: #a19f9d;
+            --neutral-gray-dark: #605e5c;
+            --font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--neutral-gray-light);
+            margin: 0;
+            padding: 30px 20px;
+            color: var(--neutral-gray-dark);
+        }
+
+        h1 {
+            font-weight: 600;
+            font-size: 1.8rem;
+            margin-bottom: 12px;
+            color: var(--azure-blue-dark);
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.1);
+            padding: 20px 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: var(--neutral-gray-dark);
+        }
+
+        input[type="file"] {
+            border: 1px solid var(--neutral-gray-medium-light);
+            border-radius: 2px;
+            padding: 8px 12px;
+            width: 100%;
+            font-size: 1rem;
+            cursor: pointer;
+            color: var(--neutral-gray-dark);
+            background-color: white;
+            transition: border-color 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        input[type="file"]:focus {
+            outline: none;
+            border-color: var(--azure-blue);
+            box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.3);
+        }
+
+        button {
+            margin-top: 20px;
+            background-color: var(--azure-blue);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 10px 24px;
+            font-size: 1rem;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            user-select: none;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--azure-blue-dark);
+        }
+
+        button:disabled {
+            background-color: var(--neutral-gray-medium-light);
+            cursor: not-allowed;
+            color: var(--neutral-gray-medium);
+        }
+
+        #loading {
+            margin-top: 15px;
+            font-style: italic;
+            color: var(--neutral-gray-medium);
+        }
+
+        #result {
+            margin-top: 25px;
+            border-top: 1px solid var(--neutral-gray-medium-light);
+            padding-top: 25px;
+            display: none;
+        }
+
+        iframe {
+            border: 1px solid var(--neutral-gray-medium-light);
+            border-radius: 4px;
+            width: 100%;
+            height: 620px;
+            box-sizing: border-box;
+            background-color: white;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 15px 10px;
+            }
+            .container {
+                padding: 15px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" role="main" aria-labelledby="page-title">
+        <h1 id="page-title">SQL Server Deadlock Analyzer</h1>
+        <p>Upload a SQL Server deadlock XML or .xdl file to analyze and get detailed information about locks, sessions, and root cause analysis.</p>
+
+        <label for="deadlockFile">Choose deadlock XML or .xdl file:</label>
+        <input type="file" id="deadlockFile" accept=".xml,.xdl" aria-describedby="fileHelp" />
+
+        <button id="uploadBtn" type="button" onclick="uploadFile()">Analyze Deadlock</button>
+        <div id="loading" aria-live="polite" role="status" style="display:none;">Processing... Please wait.</div>
+        
+        <div id="result" aria-live="polite" role="region" aria-label="Deadlock analysis result">
+            <h2>Analysis Result</h2>
+            <iframe id="resultFrame" title="Deadlock analysis details"></iframe>
+        </div>
+    </div>
+
+    <script>
+        // Replace with your Azure Function full URL including function key
+        const FUNCTION_URL = "YOUR_FUNCTION_URL_WITH_CODE";
+
+        async function uploadFile() {
+            const fileInput = document.getElementById("deadlockFile");
+            const uploadBtn = document.getElementById("uploadBtn");
+            const loadingEl = document.getElementById("loading");
+            const resultDiv = document.getElementById("result");
+            const iframe = document.getElementById("resultFrame");
+
+            if (fileInput.files.length === 0) {
+                alert("Please select a deadlock XML or .xdl file before uploading.");
+                return;
+            }
+
+            uploadBtn.disabled = true;
+            loadingEl.style.display = "block";
+            resultDiv.style.display = "none";
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            try {
+                const response = await fetch(FUNCTION_URL, {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    alert(`Failed to analyze file: ${errorText}`);
+                    return;
+                }
+
+                const htmlResult = await response.text();
+
+                // Display the HTML result inside the iframe
+                iframe.srcdoc = htmlResult;
+
+                resultDiv.style.display = "block";
+
+            } catch (error) {
+                alert("Error uploading file: " + error.message);
+            } finally {
+                uploadBtn.disabled = false;
+                loadingEl.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>
