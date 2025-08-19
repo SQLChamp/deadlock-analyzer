@@ -308,7 +308,17 @@
             }
         });
         
-        // FIXED: Analyze button handler with proper file sending
+        // FIXED: Function to properly insert HTML with executable scripts
+        function setInnerHTMLAndExecuteScripts(element, html) {
+            // Clear existing content
+            element.innerHTML = '';
+            
+            // Use createContextualFragment to properly parse and execute scripts
+            const newContent = document.createRange().createContextualFragment(html);
+            element.appendChild(newContent);
+        }
+        
+        // MAIN: Analyze button handler with SCRIPT EXECUTION FIX
         analyzeBtn.addEventListener('click', async function() {
             const file = fileInput.files[0];
             if (!file) {
@@ -338,13 +348,13 @@
                 
                 console.log('Reading file content...');
                 
-                // FIXED: Read file content as text and send directly
+                // Read file content as text and send directly
                 const fileContent = await readFileAsText(file);
                 
                 console.log('File content length:', fileContent.length);
                 console.log('Sending request to:', FUNCTION_URL);
                 
-                // FIXED: Send raw file content as request body
+                // Send raw file content as request body
                 const response = await fetch(FUNCTION_URL, {
                     method: 'POST',
                     headers: {
@@ -356,14 +366,14 @@
                 console.log('Response status:', response.status);
                 console.log('Response headers:', response.headers);
                 
-                // FIXED: Better error handling
+                // Better error handling
                 if (!response.ok) {
                     let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
                     
                     try {
                         // Try to get the detailed error message from HTML response
                         const errorHtml = await response.text();
-                        console.log('Error response HTML:', errorHtml);
+                        console.log('Error response HTML length:', errorHtml.length);
                         
                         // Extract error message from HTML if possible
                         if (errorHtml.includes('error-message')) {
@@ -378,9 +388,10 @@
                             errorMessage = errorHtml;
                         }
                         
-                        // If we got HTML back, display it (might be formatted error page)
+                        // If we got HTML back, display it with script execution
                         if (errorHtml.includes('<html') || errorHtml.includes('<div')) {
-                            analysisResult.innerHTML = errorHtml;
+                            console.log('Displaying error HTML with script execution');
+                            setInnerHTMLAndExecuteScripts(analysisResult, errorHtml);
                             resultSection.classList.add('show');
                             return;
                         }
@@ -392,19 +403,21 @@
                     throw new Error(errorMessage);
                 }
                 
-                // FIXED: Get the HTML response properly
+                // FIXED: Get the HTML response and execute scripts properly
                 const htmlResult = await response.text();
                 console.log('Success! Response length:', htmlResult.length);
                 
-                // Display the result
-                analysisResult.innerHTML = htmlResult;
+                // CRITICAL FIX: Use createContextualFragment instead of innerHTML
+                console.log('Setting HTML content with script execution...');
+                setInnerHTMLAndExecuteScripts(analysisResult, htmlResult);
+                
                 resultSection.classList.add('show');
                 
                 // Scroll to results
                 resultSection.scrollIntoView({ behavior: 'smooth' });
                 
                 // Show success message briefly
-                showSuccess('Analysis completed successfully! Scroll down to see the results.');
+                showSuccess('Analysis completed successfully! Tooltips should now work. 🎉');
                 
             } catch (error) {
                 console.error('Analysis error:', error);
@@ -416,7 +429,7 @@
             }
         });
         
-        // FIXED: File reader helper function
+        // File reader helper function
         function readFileAsText(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -461,6 +474,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('SQL Server Deadlock Analyzer loaded successfully');
             console.log('Function URL:', FUNCTION_URL);
+            console.log('Script execution fix applied for tooltips! 🎯');
         });
     </script>
 </body>
